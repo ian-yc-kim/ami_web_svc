@@ -65,7 +65,7 @@ export default function DashboardPage(): ReactElement {
 
       {!loading && !error && metrics && (
         <section>
-          <div className="dashboard-metrics-row" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="dashboard-metrics">
             <MetricCard title="Total Items" value={metrics.summary.totalActionItems} />
             <MetricCard title="Completion Rate" value={formatCompletionRate(metrics.summary.completionRate)} />
             <MetricCard
@@ -75,7 +75,7 @@ export default function DashboardPage(): ReactElement {
             />
           </div>
 
-          <div className="dashboard-grid" style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr', alignItems: 'start' }}>
+          <div className="dashboard-content">
             <div>
               <h3>Overdue</h3>
               <OverdueList items={metrics.overdueItems} />

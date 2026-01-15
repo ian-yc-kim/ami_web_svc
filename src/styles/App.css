@@ -107,7 +107,22 @@
   padding: 1rem 0;
 }
 
-/* Responsive grid for dashboard main content */
+/* New layout classes for dashboard */
+.dashboard-metrics {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-content {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+/* Keep existing grid class for compatibility */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -119,6 +134,13 @@
     align-items: center;
   }
   .dashboard-grid {
+    grid-template-columns: 1fr 360px;
+  }
+  .dashboard-metrics {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .dashboard-content {
     grid-template-columns: 1fr 360px;
   }
 }
