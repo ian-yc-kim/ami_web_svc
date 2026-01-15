@@ -164,6 +164,11 @@ Features
 - Overdue highlighting
   - Action items with a due date in the past and a status that is not "Done" are visually highlighted on both list and board views.
 
+- Filters
+  - Assignee filter: select an assignee from the dropdown to limit items to that person. Default "All" shows all assignees.
+  - Priority filter: choose from All, Low, Medium, High to filter items by priority.
+  - Filters apply to both List and Board views.
+
 Usage (user-facing)
 
 - Navigate to the board
@@ -173,16 +178,50 @@ Usage (user-facing)
   - Use the View Toggle buttons in the Action Items header to switch between List and Board views.
   - List view shows a tabular/list representation; Board view shows columns and drag-and-drop cards.
 
-- Filters
-  - Assignee filter: select an assignee from the dropdown to limit items to that person. Default "All" shows all assignees.
-  - Priority filter: choose from All, Low, Medium, High to filter items by priority.
-  - Filters apply to both List and Board views.
-
 Notes for maintainers
 
 - The component responsible for the board is src/components/KanbanBoard.tsx. It groups action items by status and uses the updateItem callback to persist status changes.
 - Keep the status string values consistent with the backend: "To Do", "In Progress", "Done".
 - The board relies on @dnd-kit/core; ensure the package is listed in package.json (it is already included).
+
+## Team Dashboard
+
+The Team Dashboard aggregates action items across meetings to help teams monitor progress and identify outstanding work. It is implemented in src/pages/DashboardPage.tsx and composed of MetricCard, OverdueList, and TeamStats components.
+
+Overview
+
+- The dashboard provides a concise overview of action item metrics and detailed tables for overdue items and per-assignee statistics.
+- For authenticated users, the Team Dashboard is the default landing view available at `/`.
+
+Features
+
+- Metrics Overview
+  - Displays high-level metrics using MetricCard components:
+    - Total Items (total number of action items across meetings)
+    - Completion Rate (percentage of items marked as Done)
+    - Overdue Items (count of overdue items; visually highlighted when greater than zero)
+
+- Overdue Items List
+  - A table listing overdue action items with columns:
+    - Description
+    - Assignee
+    - Due Date (ISO strings formatted for display)
+    - Meeting (title)
+  - Empty state: shows "No overdue items." when none exist.
+
+- Team Statistics
+  - A table breaking down action items by assignee with columns:
+    - Assignee
+    - Total Items
+    - Completed
+    - Overdue
+  - Empty state: shows "No team stats." when no data is available.
+
+Notes
+
+- The dashboard labels and metrics align with the UI components: "Team Dashboard", "Total Items", "Completion Rate", "Overdue Items", and "Team Stats".
+- See src/api/dashboard.ts for the API helper that fetches DashboardMetrics used by the page.
+- The existing Routes section already lists `/ → DashboardPage (protected; reachable only when authenticated)`; the sentence above clarifies the dashboard is the authenticated default landing route.
 
 ## Testing
 
