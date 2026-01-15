@@ -7,8 +7,7 @@ export default function ProtectedRoute() {
 
   if (isLoading) return null
 
-  const base = import.meta.env.BASE_URL ?? '/'
-  const loginPath = base.endsWith('/') ? `${base}login` : `${base}/login`
+  const loginPath = '/login'
 
   if (isAuthenticated) {
     return <Outlet />

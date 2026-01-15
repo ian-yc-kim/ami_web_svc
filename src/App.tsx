@@ -1,10 +1,20 @@
 import './styles/App.css'
+import { Routes, Route } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <div className="app">
-      <h1>React Template</h1>
-      <p>Start building your application here.</p>
+      <Navbar />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<DashboardPage />} />
+        </Route>
+      </Routes>
     </div>
   )
 }
