@@ -87,6 +87,10 @@ Error handling:
 
 - /login  → LoginPage (public)
 - /       → DashboardPage (protected; reachable only when authenticated)
+- /meetings  → MeetingListPage (protected)
+- /meetings/new  → MeetingCreatePage (protected)
+- /meetings/:id  → MeetingDetailPage (protected)
+- /meetings/:id/edit  → MeetingEditPage (protected)
 
 The Navbar renders a Logout button when authenticated and will navigate to /login after logout.
 
