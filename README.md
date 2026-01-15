@@ -36,6 +36,11 @@ Frontend React + TypeScript application for meeting management, AI summaries, ka
   - Routing and route protection (Routes, Navigate, Outlet)
   - ProtectedRoute is implemented in src/components/ProtectedRoute.tsx
 
+### Kanban / Drag-and-drop
+
+- @dnd-kit/core
+  - Used to implement drag-and-drop interactions in the Kanban Board (src/components/KanbanBoard.tsx)
+
 These packages are declared in package.json and used by the auth flow implementation.
 
 ## Environment Configuration
@@ -129,21 +134,55 @@ Files of interest (for maintainers)
 - src/components/ActionItemList.tsx
   - Renders action items, formats due dates, marks overdue items, and provides a status selector for updates.
 
+- src/components/KanbanBoard.tsx
+  - Implements the Kanban Board UI and drag-and-drop interactions using @dnd-kit/core.
+
 - src/api/actionItems.ts
   - API helpers for fetching and updating action items.
 
 - src/api/meetings.ts
   - Contains createActionItems and analyzeMeeting helpers which interact with action item creation and analysis endpoints.
 
-Types
-
 - src/types/actionItem.ts contains DTOs and ActionItem type definitions (CreateActionItemDTO, UpdateActionItemDTO, ActionItem, ActionItemStatus).
+
+### Kanban Board (Action Items)
+
+Overview
+
+The Meeting Detail page supports a Kanban Board view for action items in addition to the traditional list view. The board helps visualize and update task statuses via drag-and-drop interactions.
+
+Features
+
+- Columns
+  - The board contains three columns representing status values: "To Do", "In Progress", and "Done".
+
+- Drag-and-drop status updates
+  - Drag a card between columns to update its status.
+  - Status changes are persisted via the action item update API (see src/api/actionItems.ts).
+  - The board uses @dnd-kit/core to manage drag-and-drop interactions (see src/components/KanbanBoard.tsx).
+
+- Overdue highlighting
+  - Action items with a due date in the past and a status that is not "Done" are visually highlighted on both list and board views.
+
+Usage (user-facing)
+
+- Navigate to the board
+  - From the app: Meetings → select a Meeting → Action Items section in Meeting Detail.
+
+- View Toggle (List vs Board)
+  - Use the View Toggle buttons in the Action Items header to switch between List and Board views.
+  - List view shows a tabular/list representation; Board view shows columns and drag-and-drop cards.
+
+- Filters
+  - Assignee filter: select an assignee from the dropdown to limit items to that person. Default "All" shows all assignees.
+  - Priority filter: choose from All, Low, Medium, High to filter items by priority.
+  - Filters apply to both List and Board views.
 
 Notes for maintainers
 
-- All API endpoints are read from the configured API base URL via import.meta.env.VITE_API_BASE_URL (see src/api/client.ts).
-- Error handling logs to console.error and surfaces friendly alerts where appropriate in the UI.
-- The Action Item status values used in the UI are: "To Do", "In Progress", and "Done". Ensure any backend enums map to these values.
+- The component responsible for the board is src/components/KanbanBoard.tsx. It groups action items by status and uses the updateItem callback to persist status changes.
+- Keep the status string values consistent with the backend: "To Do", "In Progress", "Done".
+- The board relies on @dnd-kit/core; ensure the package is listed in package.json (it is already included).
 
 ## Testing
 
@@ -154,6 +193,7 @@ Notes for maintainers
 - Tests mock API calls and verify:
   - Authentication behavior including login, logout, route protection, and navigation
   - Action item list behavior, modal save flow, and status updates
+  - KanbanBoard drag-and-drop behavior and overdue highlighting (see src/components/KanbanBoard.test.tsx)
 
 ## Documentation checklist (for reviewers)
 
@@ -161,6 +201,8 @@ Notes for maintainers
 - Routes list included (/login and /)
 - Authentication flow summary present (login, persistence, logout, 401 handling)
 - Action Items Management section present and accurate
+- Kanban Board section documents columns, drag-and-drop, overdue highlighting, view toggle, and filters
+- @dnd-kit/core listed as a Kanban dependency
 
 ## Troubleshooting
 
