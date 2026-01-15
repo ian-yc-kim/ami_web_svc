@@ -1,7 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import * as RRDOM from 'react-router-dom'
+
+// Provide a navigate mock by mocking react-router-dom's hooks
+const navigateMock = vi.fn()
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  }
+})
 
 vi.mock('../api/meetings', () => ({
   createMeeting: vi.fn(() => Promise.resolve({ id: 'm1' }))
@@ -12,10 +21,6 @@ import { createMeeting } from '../api/meetings'
 
 describe('MeetingCreatePage', () => {
   it('calls createMeeting and navigates on success', async () => {
-    const navigateMock = vi.fn()
-    // Spy on useNavigate and return our mock
-    vi.spyOn(RRDOM, 'useNavigate').mockReturnValue(navigateMock as any)
-
     render(
       <MemoryRouter>
         <MeetingCreatePage />

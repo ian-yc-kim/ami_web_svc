@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import * as RRDOM from 'react-router-dom'
 
 const sampleMeeting = {
   id: 'm1',
@@ -16,16 +15,22 @@ vi.mock('../api/meetings', () => ({
   updateMeeting: vi.fn(() => Promise.resolve(sampleMeeting)),
 }))
 
+// Mock react-router-dom hooks used by the component
+const navigateMock = vi.fn()
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+    useParams: () => ({ id: 'm1' }),
+  }
+})
+
 import MeetingEditPage from './MeetingEditPage'
 import { getMeeting, updateMeeting } from '../api/meetings'
 
 describe('MeetingEditPage', () => {
   it('loads meeting, populates form, updates and navigates', async () => {
-    const navigateMock = vi.fn()
-    // Spy on useNavigate and useParams to control routing behavior
-    vi.spyOn(RRDOM, 'useNavigate').mockReturnValue(navigateMock as any)
-    vi.spyOn(RRDOM, 'useParams').mockReturnValue({ id: 'm1' } as any)
-
     render(
       <MemoryRouter>
         <MeetingEditPage />
