@@ -4,6 +4,8 @@ import Navbar from './components/Navbar'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import MeetingListPage from './pages/MeetingListPage'
+import MeetingDetailPage from './pages/MeetingDetailPage'
 
 function App() {
   return (
@@ -13,6 +15,8 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/meetings" element={<MeetingListPage />} />
+          <Route path="/meetings/:id" element={<MeetingDetailPage />} />
         </Route>
       </Routes>
     </div>

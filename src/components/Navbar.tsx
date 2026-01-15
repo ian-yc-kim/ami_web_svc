@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Navbar() {
@@ -18,9 +18,12 @@ export default function Navbar() {
     <nav className="app-navbar">
       <h1>Meeting Web</h1>
       {isAuthenticated && (
-        <button type="button" onClick={handleLogout} aria-label="logout-button">
-          Logout
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <Link to="/meetings">Meetings</Link>
+          <button type="button" onClick={handleLogout} aria-label="logout-button">
+            Logout
+          </button>
+        </div>
       )}
     </nav>
   )
