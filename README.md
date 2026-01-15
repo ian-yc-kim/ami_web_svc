@@ -94,19 +94,73 @@ Error handling:
 
 The Navbar renders a Logout button when authenticated and will navigate to /login after logout.
 
+## Action Items Management
+
+This project includes a feature to manage Action Items (tasks) that are associated with meetings. The following summarizes the high-level workflow, user interactions, and key files for maintainers.
+
+High-level workflow
+
+- Where action items appear
+  - Action items are shown on the Meeting Detail page for a given meeting.
+  - The Meeting Detail page fetches and renders action items in a list beneath meeting notes.
+
+- Generating and reviewing action items
+  - A meeting can be analyzed (AI-powered analysis) via the "Review Action Items" button on the Meeting Detail page.
+  - Analysis results surface suggested action items in a review modal where maintainers or users can edit, add, or remove items before saving.
+
+- Persisting and updating status
+  - Action items are created in bulk when the review modal is saved.
+  - Each action item has a status (To Do / In Progress / Done) and can be updated from the Action Item list. Status updates are persisted via the API.
+
+User interactions summary
+
+- Review Action Items: Click the "Review Action Items" button on a meeting to analyze notes and open the review modal with suggested items.
+- Edit items in the modal: modify description, assignee, and due date. Save to persist all items for the meeting.
+- Update status inline: use the status selector on each action item to change status; the change is persisted and the list refreshed.
+
+Files of interest (for maintainers)
+
+- src/pages/MeetingDetailPage.tsx
+  - Orchestrates meeting load, analysis request, fetch of action items, and wiring between modal and list.
+
+- src/components/ActionItemReviewModal.tsx
+  - Modal UI for reviewing and editing suggested action items before saving them for a meeting.
+
+- src/components/ActionItemList.tsx
+  - Renders action items, formats due dates, marks overdue items, and provides a status selector for updates.
+
+- src/api/actionItems.ts
+  - API helpers for fetching and updating action items.
+
+- src/api/meetings.ts
+  - Contains createActionItems and analyzeMeeting helpers which interact with action item creation and analysis endpoints.
+
+Types
+
+- src/types/actionItem.ts contains DTOs and ActionItem type definitions (CreateActionItemDTO, UpdateActionItemDTO, ActionItem, ActionItemStatus).
+
+Notes for maintainers
+
+- All API endpoints are read from the configured API base URL via import.meta.env.VITE_API_BASE_URL (see src/api/client.ts).
+- Error handling logs to console.error and surfaces friendly alerts where appropriate in the UI.
+- The Action Item status values used in the UI are: "To Do", "In Progress", and "Done". Ensure any backend enums map to these values.
+
 ## Testing
 
 - Unit tests are implemented with Vitest. Run them with:
 
   npm run test:run
 
-- Tests mock API calls and verify auth behavior, ProtectedRoute behavior, and navigation.
+- Tests mock API calls and verify:
+  - Authentication behavior including login, logout, route protection, and navigation
+  - Action item list behavior, modal save flow, and status updates
 
 ## Documentation checklist (for reviewers)
 
 - VITE_API_BASE_URL definition and example present
 - Routes list included (/login and /)
 - Authentication flow summary present (login, persistence, logout, 401 handling)
+- Action Items Management section present and accurate
 
 ## Troubleshooting
 
