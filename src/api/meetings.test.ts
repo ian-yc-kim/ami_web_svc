@@ -10,8 +10,8 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { getMeetings, getMeeting, createMeeting, updateMeeting } from './meetings'
-import type { Meeting, CreateMeetingDTO, UpdateMeetingDTO } from '../types/meeting'
+import { getMeetings, getMeeting, createMeeting, updateMeeting, analyzeMeeting } from './meetings'
+import type { Meeting, CreateMeetingDTO, UpdateMeetingDTO, MeetingAnalysis } from '../types/meeting'
 
 describe('meetings API', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>
@@ -87,6 +87,30 @@ describe('meetings API', () => {
 
     expect(apiClient.put).toHaveBeenCalledWith('/meetings/m1', partial)
     expect(res).toEqual(updated)
+  })
+
+  it('analyzeMeeting calls POST /meetings/:id/analyze and returns data', async () => {
+    const payload: MeetingAnalysis = {
+      summary: 'Meeting summary',
+      keyDiscussionPoints: ['topic1', 'topic2'],
+      decisions: ['decision1'],
+    }
+    // @ts-ignore
+    apiClient.post.mockResolvedValue({ data: payload })
+
+    const res = await analyzeMeeting('m1')
+
+    expect(apiClient.post).toHaveBeenCalledWith('/meetings/m1/analyze')
+    expect(res).toEqual(payload)
+  })
+
+  it('propagates errors from apiClient (analyzeMeeting)', async () => {
+    const error = new Error('analyze error')
+    // @ts-ignore
+    apiClient.post.mockRejectedValue(error)
+
+    await expect(analyzeMeeting('m1')).rejects.toBe(error)
+    expect(console.error).toHaveBeenCalled()
   })
 
   it('propagates errors from apiClient (getMeetings)', async () => {

@@ -16,3 +16,9 @@ export interface CreateMeetingDTO {
 }
 
 export type UpdateMeetingDTO = Partial<CreateMeetingDTO>
+
+export interface MeetingAnalysis {
+  summary: string
+  keyDiscussionPoints: string[]
+  decisions: string[]
+}
