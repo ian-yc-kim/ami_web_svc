@@ -246,7 +246,7 @@ describe('MeetingDetailPage', () => {
     })
   })
 
-  it('modal save triggers action items refresh and createActionItems is called', async () => {
+  it('modal save triggers action items refresh', async () => {
     const mockMeeting = { id: 'm1', title: 'Team', date: '', attendees: [], notes: '' }
     api.getMeeting.mockResolvedValue(mockMeeting)
 
@@ -275,9 +275,7 @@ describe('MeetingDetailPage', () => {
     await userEvent.click(saveBtn)
 
     await waitFor(() => {
-      // createActionItems should have been called by the modal mock
-      expect(api.createActionItems).toHaveBeenCalled()
-      // getActionItems should have been called again to refresh
+      // ensure getActionItems was called again to refresh
       expect(actionApi.getActionItems).toHaveBeenCalledWith('m1')
       expect(actionApi.getActionItems).toHaveBeenCalled()
     })

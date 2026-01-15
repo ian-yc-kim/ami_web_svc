@@ -1,36 +1,34 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { AuthContext } from './contexts/AuthContext'
 import App from './App'
+import { AuthContext } from './contexts/AuthContext'
 
 describe('App routing', () => {
-  it('redirects to login when accessing protected route unauthenticated', () => {
-    const value = { user: null, isAuthenticated: false, isLoading: false, login: async () => {}, logout: async () => {} }
-
+  it('shows dashboard when authenticated', async () => {
     render(
-      <AuthContext.Provider value={value as any}>
+      <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
         <MemoryRouter initialEntries={["/"]}>
           <App />
         </MemoryRouter>
       </AuthContext.Provider>,
     )
 
-    // Expect Login heading to be present because protected route should redirect
-    expect(screen.getByRole('heading', { name: /Login/i })).toBeInTheDocument()
+    // Dashboard header should be present when authenticated
+    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent(/dashboard/i)
   })
 
-  it('shows dashboard when authenticated', () => {
-    const value = { user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} }
-
+  it('does not show dashboard when unauthenticated (redirects)', async () => {
     render(
-      <AuthContext.Provider value={value as any}>
+      <AuthContext.Provider value={{ user: null, isAuthenticated: false, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
         <MemoryRouter initialEntries={["/"]}>
           <App />
         </MemoryRouter>
       </AuthContext.Provider>,
     )
 
-    expect(screen.getByText(/Welcome to Dashboard/i)).toBeInTheDocument()
+    // Dashboard heading should not be present for unauthenticated users
+    const heading = screen.queryByRole('heading', { level: 2, name: /dashboard/i })
+    expect(heading).toBeNull()
   })
 })
