@@ -10,7 +10,7 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { getMeetings, getMeeting, createMeeting, updateMeeting, analyzeMeeting } from './meetings'
+import { getMeetings, getMeeting, createMeeting, updateMeeting, analyzeMeeting, createActionItems } from './meetings'
 import type { Meeting, CreateMeetingDTO, UpdateMeetingDTO, MeetingAnalysis } from '../types/meeting'
 
 describe('meetings API', () => {
@@ -104,6 +104,16 @@ describe('meetings API', () => {
     expect(res).toEqual(payload)
   })
 
+  it('createActionItems posts to /action-items with meetingId and items', async () => {
+    const items = [{ description: 'Do X' }]
+    // @ts-ignore
+    apiClient.post.mockResolvedValue({ data: undefined })
+
+    await createActionItems('m1', items)
+
+    expect(apiClient.post).toHaveBeenCalledWith('/action-items', { meetingId: 'm1', items })
+  })
+
   it('propagates errors from apiClient (analyzeMeeting)', async () => {
     const error = new Error('analyze error')
     // @ts-ignore
@@ -119,6 +129,15 @@ describe('meetings API', () => {
     apiClient.get.mockRejectedValue(error)
 
     await expect(getMeetings()).rejects.toBe(error)
+    expect(console.error).toHaveBeenCalled()
+  })
+
+  it('propagates errors from apiClient (createActionItems)', async () => {
+    const error = new Error('fail')
+    // @ts-ignore
+    apiClient.post.mockRejectedValue(error)
+
+    await expect(createActionItems('m1', [{ description: 'X' }])).rejects.toBe(error)
     expect(console.error).toHaveBeenCalled()
   })
 })

@@ -1,3 +1,5 @@
+import type { CreateActionItemDTO } from './actionItem'
+
 export interface Meeting {
   id: string
   title: string
@@ -21,4 +23,5 @@ export interface MeetingAnalysis {
   summary: string
   keyDiscussionPoints: string[]
   decisions: string[]
+  suggestedActionItems?: CreateActionItemDTO[]
 }

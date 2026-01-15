@@ -1,5 +1,6 @@
 import apiClient from './client'
 import type { Meeting, CreateMeetingDTO, UpdateMeetingDTO, MeetingAnalysis } from '../types/meeting'
+import type { CreateActionItemDTO } from '../types/actionItem'
 
 export async function getMeetings(): Promise<Meeting[]> {
   try {
@@ -45,6 +46,15 @@ export async function analyzeMeeting(id: string): Promise<MeetingAnalysis> {
   try {
     const response = await apiClient.post(`/meetings/${id}/analyze`)
     return response.data as MeetingAnalysis
+  } catch (error) {
+    console.error('meetings API:', error)
+    throw error
+  }
+}
+
+export async function createActionItems(meetingId: string, items: CreateActionItemDTO[]): Promise<void> {
+  try {
+    await apiClient.post('/action-items', { meetingId, items })
   } catch (error) {
     console.error('meetings API:', error)
     throw error
