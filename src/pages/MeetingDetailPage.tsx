@@ -1,11 +1,12 @@
-import { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getMeeting, analyzeMeeting } from '../api/meetings'
 import { getActionItems, updateActionItem } from '../api/actionItems'
 import type { Meeting } from '../types/meeting'
-import type { CreateActionItemDTO, ActionItem, ActionItemStatus } from '../types/actionItem'
+import type { CreateActionItemDTO, ActionItem, ActionItemStatus, ActionItemPriority } from '../types/actionItem'
 import ActionItemReviewModal from '../components/ActionItemReviewModal'
 import ActionItemList from '../components/ActionItemList'
+import KanbanBoard from '../components/KanbanBoard'
 
 export default function MeetingDetailPage() {
   const { id } = useParams()
@@ -18,6 +19,11 @@ export default function MeetingDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
 
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
+
+  // New UI state for view and filters
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('All')
+  const [priorityFilter, setPriorityFilter] = useState<'All' | ActionItemPriority>('All')
 
   // single mounted ref pattern
   const isMountedRef = useRef(true)
@@ -128,6 +134,32 @@ export default function MeetingDetailPage() {
     }
   }
 
+  // derived filter options
+  const assigneeOptions = React.useMemo(() => {
+    const set = new Set<string>()
+    for (const it of actionItems) {
+      if (it.assignee && it.assignee.trim() !== '') set.add(it.assignee)
+    }
+    const arr = Array.from(set).sort()
+    return ['All', ...arr]
+  }, [actionItems])
+
+  const priorityOptions: Array<'All' | ActionItemPriority> = ['All', 'Low', 'Medium', 'High']
+
+  const filteredItems = React.useMemo(() => {
+    return actionItems.filter((it) => {
+      if (assigneeFilter !== 'All') {
+        if (!it.assignee) return false
+        if (it.assignee !== assigneeFilter) return false
+      }
+      if (priorityFilter !== 'All') {
+        if (!it.priority) return false
+        if (it.priority !== priorityFilter) return false
+      }
+      return true
+    })
+  }, [actionItems, assigneeFilter, priorityFilter])
+
   if (isLoading) return <div role="status">Loading meeting...</div>
 
   if (error) return <div role="alert">{error}</div>
@@ -156,9 +188,63 @@ export default function MeetingDetailPage() {
         </button>
       </div>
 
-      {/* Render action items below notes */}
+      {/* Action items header with view toggle and filters */}
       <div style={{ marginTop: '1rem' }}>
-        <ActionItemList items={actionItems} onItemUpdate={handleStatusUpdate} />
+        <section aria-label="Action items">
+          <h3>Action Items</h3>
+
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+            <div role="group" aria-label="view-toggle" style={{ display: 'flex', gap: 4 }}>
+              <button aria-label="view-toggle-list" type="button" onClick={() => setViewMode('list')} disabled={viewMode === 'list'}>
+                List
+              </button>
+              <button aria-label="view-toggle-board" type="button" onClick={() => setViewMode('board')} disabled={viewMode === 'board'}>
+                Board
+              </button>
+            </div>
+
+            <div>
+              <label htmlFor="assignee-filter">Assignee</label>
+              <select
+                id="assignee-filter"
+                aria-label="assignee-filter"
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+              >
+                {assigneeOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="priority-filter">Priority</label>
+              <select
+                id="priority-filter"
+                aria-label="priority-filter"
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as 'All' | ActionItemPriority)}
+              >
+                {priorityOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Render appropriate view */}
+          <div>
+            {viewMode === 'board' ? (
+              <KanbanBoard items={filteredItems} onItemUpdate={handleStatusUpdate} />
+            ) : (
+              <ActionItemList items={filteredItems} onItemUpdate={handleStatusUpdate} />
+            )}
+          </div>
+        </section>
       </div>
 
       <ActionItemReviewModal

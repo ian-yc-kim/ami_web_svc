@@ -53,8 +53,7 @@ export default function ActionItemList(props: ActionItemListProps) {
   }
 
   return (
-    <section aria-label="Action items">
-      <h3>Action Items</h3>
+    <>
       {items.length === 0 ? (
         <div>No action items.</div>
       ) : (
@@ -107,6 +106,6 @@ export default function ActionItemList(props: ActionItemListProps) {
           })}
         </ul>
       )}
-    </section>
+    </>
   )
 }

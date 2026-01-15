@@ -1,5 +1,5 @@
 import React from 'react'
-import type { ActionItem, ActionItemStatus } from '../types/actionItem'
+import type { ActionItem, ActionItemStatus, ActionItemPriority } from '../types/actionItem'
 import {
   DndContext,
   PointerSensor,
@@ -17,6 +17,12 @@ interface KanbanBoardProps {
 }
 
 const STATUSES: ActionItemStatus[] = ['To Do', 'In Progress', 'Done']
+
+const BADGE_COLORS: Record<ActionItemPriority, string> = {
+  High: '#c62828',
+  Medium: '#f9a825',
+  Low: '#2e7d32',
+}
 
 function formatDueDate(iso?: string): string | null {
   if (!iso) return null
@@ -97,12 +103,14 @@ export default function KanbanBoard(props: KanbanBoardProps) {
   )
 }
 
+type DroppableReturn = {
+  setNodeRef: (el: HTMLElement | null) => void
+  isOver?: boolean
+}
+
 function Column({ status, items }: { status: ActionItemStatus; items: ActionItem[] }) {
   // useDroppable returns an object with setNodeRef
-  const droppable = useDroppable({ id: status }) as unknown as {
-    setNodeRef: (el: HTMLElement | null) => void
-    isOver?: boolean
-  }
+  const droppable = useDroppable({ id: status }) as unknown as DroppableReturn
 
   return (
     <section
@@ -121,21 +129,28 @@ function Column({ status, items }: { status: ActionItemStatus; items: ActionItem
   )
 }
 
+type DraggableReturn = {
+  attributes?: Record<string, unknown>
+  listeners?: Record<string, unknown>
+  setNodeRef: (el: HTMLElement | null) => void
+  isDragging?: boolean
+}
+
 function KanbanCard({ item }: { item: ActionItem }) {
-  const draggable = useDraggable({ id: item.id }) as unknown as {
-    attributes: Record<string, unknown>
-    listeners: Record<string, unknown>
-    setNodeRef: (el: HTMLElement | null) => void
-    isDragging?: boolean
-  }
+  const draggable = useDraggable({ id: item.id }) as unknown as DraggableReturn
 
   const overdue = isOverdue(item)
+
+  const dragAttributes = (draggable.attributes ?? {}) as Record<string, unknown>
+  const dragListeners = (draggable.listeners ?? {}) as Record<string, unknown>
+
+  const badgeColor = item.priority ? BADGE_COLORS[item.priority] ?? '#666' : undefined
 
   return (
     <article
       ref={draggable.setNodeRef}
-      {...(draggable.attributes as any)}
-      {...(draggable.listeners as any)}
+      {...dragAttributes}
+      {...dragListeners}
       data-testid={`kanban-card-${item.id}`}
       style={{
         border: overdue ? '1px solid #c62828' : '1px solid #ddd',
@@ -148,9 +163,24 @@ function KanbanCard({ item }: { item: ActionItem }) {
       tabIndex={0}
       aria-label={`Card ${item.description}`}
     >
-      <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <strong>{item.description}</strong>
+        {item.priority && (
+          <span
+            data-testid={`priority-badge-${item.id}`}
+            style={{
+              padding: '2px 6px',
+              borderRadius: 12,
+              background: badgeColor,
+              color: '#fff',
+              fontSize: 12,
+            }}
+          >
+            {item.priority}
+          </span>
+        )}
       </div>
+
       {item.assignee && (
         <div>
           <small>Assignee: {item.assignee}</small>
