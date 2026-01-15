@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getMeeting, analyzeMeeting } from '../api/meetings'
+import { getActionItems, updateActionItem } from '../api/actionItems'
 import type { Meeting } from '../types/meeting'
-import type { CreateActionItemDTO } from '../types/actionItem'
+import type { CreateActionItemDTO, ActionItem, ActionItemStatus } from '../types/actionItem'
 import ActionItemReviewModal from '../components/ActionItemReviewModal'
+import ActionItemList from '../components/ActionItemList'
 
 export default function MeetingDetailPage() {
   const { id } = useParams()
@@ -15,27 +17,72 @@ export default function MeetingDetailPage() {
   const [extractedItems, setExtractedItems] = useState<CreateActionItemDTO[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
 
+  const [actionItems, setActionItems] = useState<ActionItem[]>([])
+
+  // single mounted ref pattern
+  const isMountedRef = useRef(true)
+  // request counters to avoid race conditions when id changes
+  const meetingRequestRef = useRef(0)
+  const actionItemsRequestRef = useRef(0)
+
   useEffect(() => {
-    let mounted = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  const fetchActionItems = async (meetingId: string): Promise<void> => {
+    if (!meetingId) return
+    // increment request id for action items
+    actionItemsRequestRef.current += 1
+    const req = actionItemsRequestRef.current
+
+    try {
+      const items = await getActionItems(meetingId)
+      // if unmounted or a newer request started, ignore
+      if (!isMountedRef.current) return
+      if (req !== actionItemsRequestRef.current) return
+      setActionItems(items)
+    } catch (err) {
+      console.error('MeetingDetailPage:', err)
+    }
+  }
+
+  useEffect(() => {
+    // ensure we use mounted-ref + request id to avoid stale updates
+    if (!id) {
+      setError('Meeting not found')
+      setIsLoading(false)
+      return
+    }
+
+    // increment meeting request id
+    meetingRequestRef.current += 1
+    const req = meetingRequestRef.current
+
+    let cancelled = false
 
     const load = async () => {
-      if (!id) {
-        setError('Meeting not found')
-        setIsLoading(false)
-        return
-      }
-
       setIsLoading(true)
+      setError(null)
       try {
         const data = await getMeeting(id)
-        if (!mounted) return
+        if (!isMountedRef.current) return
+        if (req !== meetingRequestRef.current) return
+        if (cancelled) return
         setMeeting(data)
+        // clear previous action items while fetching new ones
+        setActionItems([])
+        // fetch action items for the meeting (uses its own request id guard)
+        void fetchActionItems(id)
       } catch (err) {
         console.error('MeetingDetailPage:', err)
-        if (!mounted) return
+        if (!isMountedRef.current) return
+        if (req !== meetingRequestRef.current) return
         setError('Meeting not found')
       } finally {
-        if (!mounted) return
+        if (!isMountedRef.current) return
+        if (req !== meetingRequestRef.current) return
         setIsLoading(false)
       }
     }
@@ -43,7 +90,7 @@ export default function MeetingDetailPage() {
     void load()
 
     return () => {
-      mounted = false
+      cancelled = true
     }
   }, [id])
 
@@ -53,8 +100,7 @@ export default function MeetingDetailPage() {
     try {
       const analysis = await analyzeMeeting(meeting.id)
       const items = analysis?.suggestedActionItems ?? []
-      // Open modal first then update extracted items so modal will mount
-      // and then receive the items via prop update (useEffect inside modal handles this)
+      // Open modal and set extracted items
       setIsReviewModalOpen(true)
       setExtractedItems(items)
     } catch (err: unknown) {
@@ -62,11 +108,23 @@ export default function MeetingDetailPage() {
       try {
         alert('Failed to analyze meeting')
       } catch (e) {
-        // alert might not exist in some test environments
         console.error('MeetingDetailPage:', e)
       }
     } finally {
       setIsAnalyzing(false)
+    }
+  }
+
+  const handleStatusUpdate = async (actionItemId: string, status: ActionItemStatus): Promise<void> => {
+    try {
+      await updateActionItem(actionItemId, { status })
+      // refresh list after update only if still mounted and meeting hasn't changed
+      if (isMountedRef.current && meeting) {
+        // increment action items request id implicitly inside fetchActionItems
+        await fetchActionItems(meeting.id)
+      }
+    } catch (err) {
+      console.error('MeetingDetailPage:', err)
     }
   }
 
@@ -98,11 +156,20 @@ export default function MeetingDetailPage() {
         </button>
       </div>
 
+      {/* Render action items below notes */}
+      <div style={{ marginTop: '1rem' }}>
+        <ActionItemList items={actionItems} onItemUpdate={handleStatusUpdate} />
+      </div>
+
       <ActionItemReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
         meetingId={meeting.id}
         initialItems={extractedItems}
+        onSaved={() => {
+          // refresh action items after modal saves
+          if (isMountedRef.current && meeting) void fetchActionItems(meeting.id)
+        }}
       />
     </main>
   )

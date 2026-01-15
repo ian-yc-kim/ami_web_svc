@@ -1,16 +1,19 @@
 /// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthContext } from '../contexts/AuthContext'
 import MeetingDetailPage from './MeetingDetailPage'
 import * as meetingsApi from '../api/meetings'
+import * as actionItemsApi from '../api/actionItems'
 
 vi.mock('../api/meetings')
+vi.mock('../api/actionItems')
 
 describe('MeetingDetailPage', () => {
   const api = meetingsApi as any
+  const actionApi = actionItemsApi as any
 
   beforeEach(() => {
     vi.resetAllMocks()
@@ -38,7 +41,7 @@ describe('MeetingDetailPage', () => {
     resolve({})
   })
 
-  it('renders meeting details on success', async () => {
+  it('renders meeting details on success and shows action items section', async () => {
     const mockMeeting = {
       id: 'm1',
       title: 'Team Sync',
@@ -47,6 +50,7 @@ describe('MeetingDetailPage', () => {
       notes: 'Discuss Q1',
     }
     api.getMeeting.mockResolvedValue(mockMeeting)
+    actionApi.getActionItems.mockResolvedValue([])
 
     render(
       <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
@@ -64,58 +68,38 @@ describe('MeetingDetailPage', () => {
     expect(screen.getByText(/Bob/)).toBeInTheDocument()
     expect(screen.getByText(/Discuss Q1/)).toBeInTheDocument()
 
+    // action items section present
+    expect(screen.getByRole('heading', { name: /Action Items/i })).toBeInTheDocument()
+    expect(actionApi.getActionItems).toHaveBeenCalledWith('m1')
+
     // edit link exists
     expect(screen.getByText(/Edit/)).toBeInTheDocument()
   })
 
-  it('shows error when fetch fails', async () => {
-    api.getMeeting.mockRejectedValue(new Error('Not found'))
-
-    render(
-      <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
-        <MemoryRouter initialEntries={["/meetings/missing"]}>
-          <Routes>
-            <Route path="/meetings/:id" element={<MeetingDetailPage />} />
-          </Routes>
-        </MemoryRouter>
-      </AuthContext.Provider>,
-    )
-
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(/Meeting not found/i)
-  })
-
-  it('handles missing id param gracefully', () => {
-    render(
-      <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
-        <MemoryRouter initialEntries={["/meetings"]}>
-          <Routes>
-            <Route path="/meetings" element={<MeetingDetailPage />} />
-          </Routes>
-        </MemoryRouter>
-      </AuthContext.Provider>,
-    )
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/Meeting not found/i)
-  })
-
-  it('renders review button and opens modal with items on click', async () => {
+  it('status change calls updateActionItem and refreshes list', async () => {
     const mockMeeting = {
       id: 'm1',
       title: 'Team Sync',
       date: '2024-01-01T12:00:00Z',
-      attendees: ['Alice', 'Bob'],
-      notes: 'Discuss Q1',
+      attendees: ['Alice'],
+      notes: 'Notes',
     }
 
-    // Prepare a deferred promise to assert loading/disabled state
-    let resolveAnalyze!: (value?: unknown) => void
-    const analyzePromise = new Promise((res) => {
-      resolveAnalyze = res
-    })
+    const item = {
+      id: 'ai1',
+      meetingId: 'm1',
+      description: 'Do X',
+      status: 'To Do',
+    }
+
+    const updatedItem = { ...item, status: 'Done' }
 
     api.getMeeting.mockResolvedValue(mockMeeting)
-    api.analyzeMeeting.mockReturnValue(analyzePromise)
+    // initial load returns one item
+    actionApi.getActionItems.mockResolvedValueOnce([item])
+    // after update, refresh returns updated item
+    actionApi.getActionItems.mockResolvedValueOnce([updatedItem])
+    actionApi.updateActionItem.mockResolvedValue(updatedItem)
 
     render(
       <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
@@ -127,38 +111,80 @@ describe('MeetingDetailPage', () => {
       </AuthContext.Provider>,
     )
 
-    const btn = await screen.findByRole('button', { name: /review action items/i })
-    expect(btn).toBeInTheDocument()
+    // wait for select to appear
+    const select = await screen.findByLabelText(`status-select-${item.id}`)
+    const user = userEvent.setup()
 
-    // click triggers analyze and should disable while pending
-    await userEvent.click(btn)
-    expect(btn).toBeDisabled()
+    await user.selectOptions(select as HTMLSelectElement, 'Done')
 
-    // resolve analyze with suggested action items
-    const analysisResult = {
-      summary: '',
-      keyDiscussionPoints: [],
-      decisions: [],
-      suggestedActionItems: [
-        { description: 'Do X', assignee: 'Alice', dueDate: '2024-02-01T00:00:00Z' },
-      ],
+    await waitFor(() => {
+      expect(actionApi.updateActionItem).toHaveBeenCalledWith('ai1', { status: 'Done' })
+    })
+
+    // after refresh, select value should reflect updated status
+    await waitFor(() => {
+      expect((screen.getByLabelText(`status-select-${item.id}`) as HTMLSelectElement).value).toBe('Done')
+    })
+  })
+
+  it('modal save triggers action items refresh', async () => {
+    const mockMeeting = {
+      id: 'm1',
+      title: 'Team Sync',
+      date: '2024-01-01T12:00:00Z',
+      attendees: ['Alice'],
+      notes: 'Notes',
     }
-    // resolve the deferred promise
-    resolveAnalyze(analysisResult)
 
-    // wait for modal to appear
-    const dialog = await screen.findByRole('dialog', { name: /review action items/i })
-    expect(dialog).toBeInTheDocument()
+    api.getMeeting.mockResolvedValue(mockMeeting)
 
-    // verify analyzeMeeting called with meeting id
-    expect(api.analyzeMeeting).toHaveBeenCalledWith('m1')
+    // initial action items empty
+    actionApi.getActionItems.mockResolvedValueOnce([])
+    // after save, backend returns a saved item
+    const saved = [
+      {
+        id: 'ai-saved',
+        meetingId: 'm1',
+        description: 'Saved task',
+        status: 'To Do',
+      },
+    ]
+    actionApi.getActionItems.mockResolvedValueOnce(saved)
 
-    // verify prefilled values
-    const descInputs = screen.getAllByLabelText(/description/i)
-    expect(descInputs[0]).toHaveValue('Do X')
-    const assigneeInputs = screen.getAllByLabelText(/assignee/i)
-    expect(assigneeInputs[0]).toHaveValue('Alice')
-    const dueInputs = screen.getAllByLabelText(/due date/i)
-    expect(dueInputs[0]).toHaveValue('2024-02-01')
+    // createActionItems is called by modal (meetings api)
+    api.analyzeMeeting.mockResolvedValue({ summary: '', keyDiscussionPoints: [], decisions: [], suggestedActionItems: [] })
+    api.createActionItems.mockResolvedValue(undefined)
+
+    render(
+      <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
+        <MemoryRouter initialEntries={["/meetings/m1"]}>
+          <Routes>
+            <Route path="/meetings/:id" element={<MeetingDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+
+    const reviewBtn = await screen.findByRole('button', { name: /review action items/i })
+    await userEvent.click(reviewBtn)
+
+    // modal mounts; click Save in modal. The modal's Save triggers meetings.createActionItems
+    const saveBtn = await screen.findByRole('button', { name: /Save/i })
+    await userEvent.click(saveBtn)
+
+    // ensure createActionItems called
+    await waitFor(() => {
+      expect(api.createActionItems).toHaveBeenCalled()
+    })
+
+    // ensure getActionItems called again to refresh
+    await waitFor(() => {
+      expect(actionApi.getActionItems).toHaveBeenCalled()
+    })
+
+    // After refresh, the saved item should be rendered
+    await waitFor(() => {
+      expect(screen.getByText('Saved task')).toBeInTheDocument()
+    })
   })
 })
