@@ -31,7 +31,8 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />)
 
-    expect(screen.getByRole('status')).toHaveTextContent(/Loading.../i)
+    // Mandated UI: Loading text without role attribute
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
 
     // resolve to avoid unresolved promise warnings
     resolve({
@@ -43,7 +44,7 @@ describe('DashboardPage', () => {
 
   it('renders metrics, overdue list and team stats on success', async () => {
     const payload: DashboardMetrics = {
-      summary: { totalActionItems: 10, completionRate: 0.75, overdueCount: 1 },
+      summary: { totalActionItems: 10, completionRate: 75, overdueCount: 1 },
       overdueItems: [
         {
           id: 'o1',
@@ -62,10 +63,9 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />)
 
-    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent(/dashboard/i)
+    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent('Team Dashboard')
 
-    // Metric cards are regions labeled by titles
-    const totalRegion = screen.getByRole('region', { name: 'Total Items' })
+    const totalRegion = screen.getByRole('region', { name: 'Total Action Items' })
     expect(totalRegion).toHaveTextContent('10')
 
     const rateRegion = screen.getByRole('region', { name: 'Completion Rate' })
@@ -74,7 +74,6 @@ describe('DashboardPage', () => {
     const overdueRegion = screen.getByRole('region', { name: 'Overdue Items' })
     expect(overdueRegion).toHaveTextContent('1')
 
-    // Overdue row and team stat row
     expect(await screen.findByTestId('overdue-row-o1')).toBeInTheDocument()
     expect(screen.getByTestId('teamstat-row-Alice')).toBeInTheDocument()
   })
@@ -84,9 +83,10 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />)
 
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(/Failed to load dashboard metrics./i)
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // Mandated UI: error displayed as plain text without role alert
+    const alert = await screen.findByText('Failed to load dashboard metrics.')
+    expect(alert).toBeInTheDocument()
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
     expect(console.error).toHaveBeenCalled()
   })
 })

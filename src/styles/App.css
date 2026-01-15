@@ -107,21 +107,6 @@
   padding: 1rem 0;
 }
 
-/* New layout classes for dashboard */
-.dashboard-metrics {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.dashboard-content {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
-  align-items: start;
-}
-
 /* Keep existing grid class for compatibility */
 .dashboard-grid {
   display: grid;
@@ -136,11 +121,22 @@
   .dashboard-grid {
     grid-template-columns: 1fr 360px;
   }
-  .dashboard-metrics {
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-  .dashboard-content {
-    grid-template-columns: 1fr 360px;
-  }
+  /* avoid defining full dashboard-metrics/content here to prevent duplication */
+}
+
+/* Appended mandated dashboard CSS snippet (single definitive definition) */
+.dashboard-metrics {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.dashboard-content {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.dashboard-section {
+  flex: 1;
+  min-width: 300px;
 }

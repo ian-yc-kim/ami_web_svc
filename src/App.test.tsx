@@ -1,34 +1,57 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import App from './App'
-import { AuthContext } from './contexts/AuthContext'
+import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+
+// Mock dashboard API to avoid network calls during App rendering
+vi.mock('./api/dashboard', () => ({
+  getDashboardMetrics: vi.fn(),
+}))
+
+import * as dashboardApi from './api/dashboard'
 
 describe('App routing', () => {
-  it('shows dashboard when authenticated', async () => {
-    render(
-      <AuthContext.Provider value={{ user: { id: 'u1' }, isAuthenticated: true, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
-        <MemoryRouter initialEntries={["/"]}>
-          <App />
-        </MemoryRouter>
-      </AuthContext.Provider>,
-    )
+  beforeEach(() => {
+    vi.resetAllMocks()
+    // Provide a safe resolved payload for dashboard metrics
+    const payload = {
+      summary: { totalActionItems: 0, completionRate: 0, overdueCount: 0 },
+      overdueItems: [],
+      teamStats: [],
+    }
+    ;(dashboardApi as unknown as { getDashboardMetrics: { mockResolvedValue: (v: unknown) => void } }).getDashboardMetrics.mockResolvedValue(payload)
 
-    // Dashboard header should be present when authenticated
-    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent(/dashboard/i)
+    // Ensure AuthProvider treats user as authenticated via localStorage
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'test', name: 'Test User' }))
   })
 
-  it('does not show dashboard when unauthenticated (redirects)', async () => {
+  it('shows dashboard when authenticated', async () => {
     render(
-      <AuthContext.Provider value={{ user: null, isAuthenticated: false, isLoading: false, login: async () => {}, logout: async () => {} } as any}>
-        <MemoryRouter initialEntries={["/"]}>
+      <AuthProvider>
+        <BrowserRouter>
           <App />
-        </MemoryRouter>
-      </AuthContext.Provider>,
+        </BrowserRouter>
+      </AuthProvider>
     )
 
-    // Dashboard heading should not be present for unauthenticated users
-    const heading = screen.queryByRole('heading', { level: 2, name: /dashboard/i })
-    expect(heading).toBeNull()
+    const heading = await screen.findByRole('heading', { level: 2 })
+    expect(heading).toHaveTextContent('Team Dashboard')
+  })
+
+  it('does not show Team Dashboard when unauthenticated (redirects)', async () => {
+    // simulate unauthenticated state
+    localStorage.removeItem('auth_user')
+
+    render(
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
+    )
+
+    // specifically assert the Team Dashboard heading is not present
+    expect(screen.queryByRole('heading', { level: 2, name: /Team Dashboard/ })).not.toBeInTheDocument()
   })
 })
