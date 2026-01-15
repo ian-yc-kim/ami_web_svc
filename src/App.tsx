@@ -6,6 +6,8 @@ import DashboardPage from './pages/DashboardPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import MeetingListPage from './pages/MeetingListPage'
 import MeetingDetailPage from './pages/MeetingDetailPage'
+import MeetingCreatePage from './pages/MeetingCreatePage'
+import MeetingEditPage from './pages/MeetingEditPage'
 
 function App() {
   return (
@@ -16,7 +18,9 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/meetings" element={<MeetingListPage />} />
+          <Route path="/meetings/new" element={<MeetingCreatePage />} />
           <Route path="/meetings/:id" element={<MeetingDetailPage />} />
+          <Route path="/meetings/:id/edit" element={<MeetingEditPage />} />
         </Route>
       </Routes>
     </div>
